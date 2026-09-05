@@ -1,0 +1,8 @@
+.env
+perfil/
+__pycache__/
+*.pyc
+.venv/
+dist/
+build/
+instalador/

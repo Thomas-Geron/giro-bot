@@ -1,0 +1,51 @@
+name: Release
+
+# Publica o instalador quando você cria uma tag: git tag v1.1.0 && git push --tags
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Sincroniza a versão com a tag
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}" -replace '^v',''
+          if (-not $v) { $v = "0.0.0" }
+          echo "VERSAO=$v" >> $env:GITHUB_ENV
+          (Get-Content version.py) -replace '__version__ = ".*"', "__version__ = `"$v`"" | Set-Content version.py
+          Write-Host "Versao: $v"
+
+      - name: Dependências
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Gera o executável
+        run: pyinstaller --noconfirm --clean girobot.spec
+
+      - name: Instala o Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Gera o instalador
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc "/DMinhaVersao=$env:VERSAO" installer.iss
+          if (-not (Test-Path "instalador\GiroBot-Setup.exe")) { throw "Instalador nao gerado" }
+
+      - name: Publica a release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: instalador/GiroBot-Setup.exe
+          generate_release_notes: true
