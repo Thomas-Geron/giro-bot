@@ -15,7 +15,18 @@ from typing import Optional
 
 import httpx
 
+from version import __version__
+
 logger = logging.getLogger(__name__)
+
+
+def _erro(exc: httpx.HTTPStatusError) -> str:
+    """Mensagem do próprio Giro quando houver (ex.: termo não aceito); senão o código HTTP."""
+    try:
+        msg = (exc.response.json() or {}).get("erro")
+    except ValueError:
+        msg = None
+    return msg or f"HTTP {exc.response.status_code}"
 
 
 @dataclass
@@ -35,7 +46,8 @@ class GiroClient:
         self.token = token or ""
         self._http = httpx.Client(
             timeout=timeout,
-            headers={"Authorization": f"Bearer {self.token}"},
+            headers={"Authorization": f"Bearer {self.token}",
+                     "User-Agent": f"GiroBot/{__version__}"},  # entra no registro do aceite
         )
 
     def fechar(self) -> None:
@@ -47,7 +59,29 @@ class GiroClient:
             r.raise_for_status()
             return r.json()
         except httpx.HTTPStatusError as exc:
-            return {"erro": f"HTTP {exc.response.status_code}"}
+            return {"erro": _erro(exc)}
+        except Exception as exc:
+            return {"erro": str(exc)}
+
+    def termo(self) -> dict:
+        """Texto e versão atual do termo de riscos (público no Giro)."""
+        try:
+            r = self._http.get(f"{self.url}/api/bot/termo")
+            r.raise_for_status()
+            return r.json()
+        except httpx.HTTPStatusError as exc:
+            return {"erro": _erro(exc)}
+        except Exception as exc:
+            return {"erro": str(exc)}
+
+    def aceitar_termo(self, versao: str, nome: str) -> dict:
+        """Registra no Giro o aceite feito nesta janela."""
+        try:
+            r = self._http.post(f"{self.url}/api/bot/aceite", json={"versao": versao, "nome": nome})
+            r.raise_for_status()
+            return r.json()
+        except httpx.HTTPStatusError as exc:
+            return {"erro": _erro(exc)}
         except Exception as exc:
             return {"erro": str(exc)}
 
@@ -60,7 +94,7 @@ class GiroClient:
             r.raise_for_status()
             return r.json()
         except httpx.HTTPStatusError as exc:
-            return {"erro": f"HTTP {exc.response.status_code}: {exc.response.text[:200]}"}
+            return {"erro": _erro(exc)}
         except Exception as exc:
             return {"erro": str(exc)}
 

@@ -30,6 +30,9 @@ PADRAO = {
     "canais": ["simulado"],
     "poll_segundos": 15,
     "headless": False,
+    "termo_versao": "",      # versão do termo de riscos aceita nesta janela
+    "termo_nome": "",
+    "termo_aceito_em": "",
 }
 
 

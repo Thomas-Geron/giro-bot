@@ -34,6 +34,21 @@ já logado, com a sua sessão. Por isso não guarda senha de portal nenhum.
 **Use um número só da loja.** O bot leva ao Giro as conversas individuais não
 lidas; grupos, listas de transmissão, status e canais ficam de fora.
 
+### Termo de riscos (obrigatório)
+O bot não é oficial, e usar automação no WhatsApp contraria os Termos de Serviço
+dele (o número pode ser bloqueado). Por isso o uso depende de aceitar o **termo de
+riscos**, em três pontos:
+
+1. **No instalador**: a página de licença só deixa seguir com "Eu aceito".
+2. **No site do Giro**, página **Bot**: a conta da loja marca cada declaração e
+   digita o nome completo. Sem esse aceite, download e token nem aparecem, e o
+   Giro recusa o bot.
+3. **No aplicativo**: antes de iniciar pela primeira vez (e sempre que o termo
+   mudar), a janela mostra o termo e pede o mesmo aceite.
+
+Os riscos ficam **sempre à vista**: no topo da janela do bot, na página Bot do
+Giro e em cada conversa trazida pelo bot.
+
 Deixe a janela aberta enquanto quiser receber e responder mensagens.
 
 ### Atualizações
@@ -108,12 +123,24 @@ canais/
   navegador.py     Playwright com perfil persistente (login salvo)
   simulado.py      canal de teste, sem navegador
   whatsapp.py      WhatsApp Web
+termo.py           títulos dos riscos (aviso sem internet) e regra do nome
+TERMO.txt          termo para a página de licença do instalador
 checar_whatsapp.py confere o canal do WhatsApp contra uma página que imita o
                    WhatsApp Web (sem rede): python checar_whatsapp.py
+checar_termo.py    confere a janela do termo (sem rede): python checar_termo.py
 ```
 
 Adicionar canal = criar uma classe que implementa `Canal` e registrá-la em
 `canais/__init__.py`. O motor não muda.
+
+### O termo mudou?
+O texto oficial fica no Giro (`app/services/termo_bot.py`). Ao mudar, suba a
+`VERSAO` lá — todo mundo precisa aceitar de novo — e regere o `TERMO.txt` daqui:
+
+```bash
+curl -s https://revendedora-web.onrender.com/api/bot/termo.txt -o TERMO.txt
+```
+(salve como UTF-8 com BOM, que é como o Inno Setup lê acentos) e publique uma versão.
 
 ### Publicar uma atualização (para o desenvolvedor)
 

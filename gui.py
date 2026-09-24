@@ -14,7 +14,9 @@ from datetime import datetime
 from tkinter import messagebox, scrolledtext, ttk
 
 import config
+import termo
 import updater
+from giro_client import GiroClient
 from runner import Runner
 from version import __version__
 
@@ -26,8 +28,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(f"Giro Bot {__version__}")
-        self.geometry("620x560")
-        self.minsize(560, 480)
+        self.geometry("640x760")   # o aviso de riscos fixo ocupa o topo
+        self.minsize(600, 640)
 
         config.configurar_log()
         self.cfg = config.carregar()
@@ -42,6 +44,8 @@ class App(tk.Tk):
     # ── layout ────────────────────────────────────────────────────────────
     def _montar(self):
         pad = {"padx": 12, "pady": 6}
+
+        self._montar_riscos()
 
         topo = ttk.Frame(self)
         topo.pack(fill="x", **pad)
@@ -111,14 +115,32 @@ class App(tk.Tk):
 
         self._log("Pronto. Cole o token, escolha os canais e clique em Iniciar.")
 
+    def _montar_riscos(self):
+        """Aviso fixo: não fecha e não some enquanto a janela estiver aberta."""
+        caixa = tk.Frame(self, bg="#FDECEA", highlightbackground="#B42D1E", highlightthickness=2)
+        caixa.pack(fill="x", padx=12, pady=(10, 0))
+        tk.Label(caixa, text="⚠  Riscos de usar o bot (não é oficial)", bg="#FDECEA", fg="#8A1C12",
+                 font=("Segoe UI", 10, "bold"), anchor="w").pack(fill="x", padx=10, pady=(6, 2))
+        self.lbl_riscos = tk.Label(caixa, bg="#FDECEA", fg="#3A0A05", justify="left", anchor="w",
+                                   wraplength=580, font=("Segoe UI", 9))
+        self.lbl_riscos.pack(fill="x", padx=10)
+        self._mostrar_riscos(termo.RISCOS_PADRAO)
+        link = tk.Label(caixa, text="Ler o termo completo", bg="#FDECEA", fg="#8A1C12", cursor="hand2",
+                        font=("Segoe UI", 9, "underline"), anchor="w")
+        link.pack(fill="x", padx=10, pady=(2, 6))
+        link.bind("<Button-1>", lambda _e: self._abrir_giro("/admin/bot/termo"))
+
+    def _mostrar_riscos(self, titulos):
+        self.lbl_riscos.configure(text="\n".join(f"•  {t}" for t in titulos))
+
     # ── ações ─────────────────────────────────────────────────────────────
     def _alternar_token(self):
         self.ent_token.configure(show="" if self.var_ver.get() else "•")
 
-    def _abrir_giro(self):
+    def _abrir_giro(self, caminho: str = "/admin/bot"):
         url = (self.var_url.get() or "").rstrip("/")
         if url:
-            webbrowser.open(f"{url}/admin/bot")
+            webbrowser.open(f"{url}{caminho}")
 
     def _abrir_registro(self):
         if config.LOG_FILE.exists():
@@ -134,6 +156,81 @@ class App(tk.Tk):
             "poll_segundos": int(self.cfg.get("poll_segundos") or 15),
             "headless": False,
         }
+
+    # ── termo de riscos ───────────────────────────────────────────────────
+    def _termo_aceito(self, cfg: dict) -> bool:
+        """Busca a versão atual no Giro; se ainda não foi aceita nesta janela, pede o aceite."""
+        cli = GiroClient(cfg["giro_url"], cfg["token"])
+        try:
+            atual = cli.termo()
+            if "erro" in atual:
+                messagebox.showerror("Termo de riscos", f"Não consegui ler o termo no Giro:\n{atual['erro']}")
+                return False
+            self._mostrar_riscos([r["titulo"] for r in atual.get("riscos", [])] or termo.RISCOS_PADRAO)
+            if self.cfg.get("termo_versao") == atual.get("versao"):
+                return True
+            nome = self._dialogo_termo(atual)
+            if not nome:
+                self._log("Termo não aceito: o bot não foi iniciado.")
+                return False
+            config.salvar({"termo_versao": atual["versao"], "termo_nome": nome,
+                           "termo_aceito_em": datetime.now().isoformat(timespec="seconds")})
+            self.cfg = config.carregar()
+            res = cli.aceitar_termo(atual["versao"], nome)
+            self._log("Termo aceito." if "erro" not in res else f"Termo aceito aqui; o Giro respondeu: {res['erro']}")
+            return True
+        finally:
+            cli.fechar()
+
+    def _dialogo_termo(self, atual: dict) -> str:
+        """Janela de aceite. Devolve o nome digitado, ou "" se a pessoa não aceitou."""
+        janela = tk.Toplevel(self)
+        janela.title("Termo de riscos do Giro Bot")
+        janela.geometry("680x640")
+        janela.transient(self)
+        janela.grab_set()
+        resultado = {"nome": ""}
+
+        ttk.Label(janela, text="Leia com atenção. Para usar o bot, marque cada declaração.",
+                  font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=12, pady=(10, 4))
+        caixa = scrolledtext.ScrolledText(janela, height=16, wrap="word", font=("Segoe UI", 10))
+        caixa.insert("1.0", termo.texto(atual))
+        caixa.configure(state="disabled")
+        caixa.pack(fill="both", expand=True, padx=12)
+
+        marcas = []
+        quadro = ttk.Frame(janela)
+        quadro.pack(fill="x", padx=12, pady=(8, 0))
+        for texto_decl in atual.get("declaracoes", []):
+            v = tk.BooleanVar(value=False)
+            marcas.append(v)
+            tk.Checkbutton(quadro, text=texto_decl, variable=v, command=lambda: atualizar(),
+                           wraplength=620, justify="left", anchor="w").pack(fill="x", anchor="w", pady=2)
+
+        linha = ttk.Frame(janela)
+        linha.pack(fill="x", padx=12, pady=8)
+        ttk.Label(linha, text="Seu nome completo (vale como assinatura):").pack(anchor="w")
+        var_nome = tk.StringVar()
+        ttk.Entry(linha, textvariable=var_nome, width=50).pack(anchor="w", pady=2)
+        var_nome.trace_add("write", lambda *_: atualizar())
+
+        botoes = ttk.Frame(janela)
+        botoes.pack(fill="x", padx=12, pady=(0, 12))
+        btn_aceito = ttk.Button(botoes, text="Li, entendi os riscos e aceito", state="disabled")
+        btn_aceito.pack(side="right")
+        ttk.Button(botoes, text="Não aceito", command=janela.destroy).pack(side="right", padx=8)
+
+        def atualizar():
+            pronto = bool(marcas) and all(v.get() for v in marcas) and termo.nome_valido(var_nome.get())
+            btn_aceito.configure(state="normal" if pronto else "disabled")
+
+        def aceitar():
+            resultado["nome"] = var_nome.get().strip()
+            janela.destroy()
+
+        btn_aceito.configure(command=aceitar)
+        self.wait_window(janela)
+        return resultado["nome"]
 
     def _testar(self):
         cfg = self._coletar()
@@ -167,6 +264,8 @@ class App(tk.Tk):
             return
         config.salvar(cfg)
         self.cfg = config.carregar()
+        if not self._termo_aceito(cfg):
+            return
         self.runner = Runner(cfg, log=lambda m: self.fila.put(m))
         self.runner.iniciar()
         self.btn_iniciar.configure(text="Parar")
