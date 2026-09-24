@@ -1,6 +1,6 @@
 """Navegador Playwright com perfil persistente.
 
-Perfil persistente = o login (QR do WhatsApp, sessão da OLX) fica salvo em
+Perfil persistente = o login (QR do WhatsApp) fica salvo em
 disco e sobrevive entre execuções: o lojista loga uma vez só.
 """
 import logging

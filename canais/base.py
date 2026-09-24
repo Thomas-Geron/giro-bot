@@ -5,7 +5,7 @@ from giro_client import MensagemEntrante
 
 
 class Canal(ABC):
-    """Um canal é uma fonte/destino de mensagens (WhatsApp, OLX, ...).
+    """Um canal é uma fonte/destino de mensagens (WhatsApp do celular, simulado).
 
     O bot só conhece esta interface — trocar/adicionar canal não mexe no loop.
     """
@@ -25,8 +25,9 @@ class Canal(ABC):
         """
 
     @abstractmethod
-    def enviar(self, thread_id: str, texto: str) -> None:
-        """Envia a resposta na conversa. Deve levantar exceção se falhar."""
+    def enviar(self, thread_id: str, texto: str, contato_nome: str = "") -> None:
+        """Envia a resposta na conversa. Deve levantar exceção se falhar.
+        `contato_nome` ajuda a achar a conversa quando o canal procura pelo nome."""
 
     def encerrar(self) -> None:
         """Fecha recursos. Sobrescreva se necessário."""

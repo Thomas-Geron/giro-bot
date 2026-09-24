@@ -18,10 +18,14 @@ logger = logging.getLogger(__name__)
 class Runner:
     def __init__(self, cfg: dict, log: Optional[Callable[[str], None]] = None):
         self.cfg = cfg
-        self._log = log or (lambda msg: logger.info(msg))
+        self._saida = log or (lambda msg: None)
         self._parar = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.loja: str = ""
+
+    def _log(self, msg: str) -> None:
+        logger.info(msg)
+        self._saida(msg)
 
     # ── controle ──────────────────────────────────────────────────────────
     @property
@@ -74,7 +78,8 @@ class Runner:
                 cli.confirmar(envio_id, False, f"Canal '{nome}' não está ativo neste computador.")
                 continue
             try:
-                canal.enviar(pendente.get("thread_id", ""), pendente.get("texto", ""))
+                canal.enviar(pendente.get("thread_id", ""), pendente.get("texto", ""),
+                             pendente.get("contato_nome", ""))
                 cli.confirmar(envio_id, True)
                 self._log(f"[{nome}] resposta enviada")
             except Exception as exc:

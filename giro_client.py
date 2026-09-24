@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MensagemEntrante:
-    canal: str            # 'whatsapp' | 'olx'
+    canal: str            # 'whatsapp' | 'simulado'
     thread_id: str        # id da conversa no canal (ex.: telefone, id do chat)
     texto: str
     msg_id: str           # id único da mensagem no canal (idempotência)

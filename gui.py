@@ -4,6 +4,8 @@ Sem terminal: o lojista cola o token, escolhe os canais e clica em Iniciar.
 As mensagens do motor chegam por uma fila e são desenhadas pela thread da
 interface (tkinter não é thread-safe).
 """
+import logging
+import os
 import queue
 import threading
 import tkinter as tk
@@ -16,7 +18,8 @@ import updater
 from runner import Runner
 from version import __version__
 
-CANAIS_UI = [("whatsapp", "WhatsApp"), ("olx", "OLX"), ("simulado", "Simulado (teste)")]
+CANAIS_UI = [("whatsapp", "WhatsApp do celular"), ("simulado", "Simulado (teste)")]
+logger = logging.getLogger("girobot")
 
 
 class App(tk.Tk):
@@ -26,6 +29,7 @@ class App(tk.Tk):
         self.geometry("620x560")
         self.minsize(560, 480)
 
+        config.configurar_log()
         self.cfg = config.carregar()
         self.fila = queue.Queue()
         self.runner = None
@@ -78,6 +82,12 @@ class App(tk.Tk):
             v = tk.BooleanVar(value=chave in ativos)
             self.vars_canais[chave] = v
             ttk.Checkbutton(canais, text=rotulo, variable=v).grid(row=0, column=i, padx=10, pady=6, sticky="w")
+        ttk.Label(
+            canais, foreground="#666", wraplength=560, justify="left",
+            text="Use um número só da loja: o bot leva ao Giro as conversas individuais não lidas "
+                 "(grupos ficam de fora). OLX e WhatsApp oficial não precisam do bot: ligue em "
+                 "Minha loja, no Giro.",
+        ).grid(row=1, column=0, columnspan=len(CANAIS_UI), padx=10, pady=(0, 6), sticky="w")
 
         botoes = ttk.Frame(self)
         botoes.pack(fill="x", **pad)
@@ -85,6 +95,7 @@ class App(tk.Tk):
         self.btn_iniciar.pack(side="left")
         ttk.Button(botoes, text="Testar conexão", command=self._testar).pack(side="left", padx=8)
         ttk.Button(botoes, text="Abrir o Giro", command=self._abrir_giro).pack(side="left")
+        ttk.Button(botoes, text="Abrir registro", command=self._abrir_registro).pack(side="left", padx=8)
         ttk.Button(botoes, text="Buscar atualizações",
                    command=lambda: self._checar_atualizacao(silencioso=False)).pack(side="right")
 
@@ -108,6 +119,12 @@ class App(tk.Tk):
         url = (self.var_url.get() or "").rstrip("/")
         if url:
             webbrowser.open(f"{url}/admin/bot")
+
+    def _abrir_registro(self):
+        if config.LOG_FILE.exists():
+            os.startfile(config.LOG_FILE)  # abre no Bloco de Notas
+        else:
+            messagebox.showinfo("Registro", "Ainda não há registro. Ele é criado quando o bot roda.")
 
     def _coletar(self) -> dict:
         return {
@@ -232,6 +249,11 @@ class App(tk.Tk):
 
     # ── log ───────────────────────────────────────────────────────────────
     def _log(self, msg: str):
+        """Mensagem da própria janela: vai para a tela e para o arquivo."""
+        logger.info(msg)
+        self._mostrar(msg)
+
+    def _mostrar(self, msg: str):
         self.txt.configure(state="normal")
         self.txt.insert("end", f"{datetime.now():%H:%M:%S}  {msg}\n")
         self.txt.see("end")
@@ -240,7 +262,7 @@ class App(tk.Tk):
     def _drenar_fila(self):
         try:
             while True:
-                self._log(self.fila.get_nowait())
+                self._mostrar(self.fila.get_nowait())  # o motor já gravou no arquivo
         except queue.Empty:
             pass
         if self.runner and not self.runner.rodando and self.btn_iniciar["text"] == "Parar":

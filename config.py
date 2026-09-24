@@ -5,7 +5,9 @@ janela do programa, nunca por arquivo. O .env continua funcionando para
 desenvolvimento (tem prioridade se existir).
 """
 import json
+import logging
 import os
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
@@ -17,6 +19,10 @@ else:
 
 CONFIG_FILE = CONFIG_DIR / "config.json"
 PERFIL_DIR = CONFIG_DIR / "perfil"      # sessão do navegador (login salvo)
+LOG_FILE = CONFIG_DIR / "bot.log"        # registro: o que aconteceu, mesmo com a janela fechada
+
+# OLX e WhatsApp oficial funcionam direto no Giro, pela API: não passam pelo bot.
+CANAIS = ("whatsapp", "simulado")
 
 PADRAO = {
     "giro_url": "https://revendedora-web.onrender.com",
@@ -53,7 +59,21 @@ def carregar() -> dict:
             pass
 
     dados["giro_url"] = (dados.get("giro_url") or "").rstrip("/")
+    dados["canais"] = [c for c in dados.get("canais") or [] if c in CANAIS]  # versões antigas tinham "olx"
     return dados
+
+
+def configurar_log() -> Path:
+    """Grava o registro em bot.log (até ~1,5 MB em 3 arquivos), além da janela."""
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    raiz = logging.getLogger()
+    if not any(isinstance(h, RotatingFileHandler) for h in raiz.handlers):
+        arquivo = RotatingFileHandler(LOG_FILE, maxBytes=512_000, backupCount=2, encoding="utf-8")
+        arquivo.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+        raiz.addHandler(arquivo)
+    raiz.setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # uma linha a cada 15 s encheria o arquivo
+    return LOG_FILE
 
 
 def salvar(dados: dict) -> None:

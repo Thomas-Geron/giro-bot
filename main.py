@@ -10,6 +10,7 @@ from runner import Runner
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
+config.configurar_log()
 
 
 def main() -> int:
@@ -20,7 +21,7 @@ def main() -> int:
             print("ERRO:", e)
         return 1
 
-    runner = Runner(cfg, log=lambda m: print(m))
+    runner = Runner(cfg)  # o logging já mostra no terminal e grava no arquivo
     runner.iniciar()
     try:
         while runner.rodando:

@@ -50,7 +50,7 @@ class CanalSimulado(Canal):
             ))
         return novas
 
-    def enviar(self, thread_id: str, texto: str) -> None:
+    def enviar(self, thread_id: str, texto: str, contato_nome: str = "") -> None:
         with ARQ_SAIDA.open("a", encoding="utf-8") as f:
             f.write(f"[{thread_id}] {texto}\n")
         logger.info("Resposta simulada gravada em %s", ARQ_SAIDA.name)

@@ -12,7 +12,7 @@ def criar_canais(nomes: list[str], headless: bool = False) -> tuple[dict[str, Ca
 
     O navegador só é aberto se algum canal precisar dele.
     """
-    precisa_navegador = any(n in ("whatsapp", "olx") for n in nomes)
+    precisa_navegador = "whatsapp" in nomes
     navegador = None
     if precisa_navegador:
         from canais.navegador import Navegador
@@ -27,9 +27,6 @@ def criar_canais(nomes: list[str], headless: bool = False) -> tuple[dict[str, Ca
         elif nome == "whatsapp":
             from canais.whatsapp import CanalWhatsApp
             canais[nome] = CanalWhatsApp(navegador)
-        elif nome == "olx":
-            from canais.olx import CanalOlx
-            canais[nome] = CanalOlx(navegador)
         else:
             logger.warning("Canal desconhecido ignorado: %s", nome)
     return canais, navegador

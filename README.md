@@ -1,7 +1,7 @@
 # Giro Bot
 
-Leva as conversas de **WhatsApp** e **OLX** para a Central de Mensagens do
-**Giro**, e envia pelo canal as respostas que você escreve no painel.
+Leva as conversas do **WhatsApp do celular** para a Central de Mensagens do
+**Giro**, e envia por ele as respostas que você escreve no painel.
 
 Roda no **computador do lojista** (não no servidor): ele age dentro do navegador
 já logado, com a sua sessão. Por isso não guarda senha de portal nenhum.
@@ -13,9 +13,10 @@ já logado, com a sua sessão. Por isso não guarda senha de portal nenhum.
              ──── "enviei" (confirma) ───►
 ```
 
-> Os canais com API oficial (**Mercado Livre**, e no futuro WebMotors e WhatsApp
-> Business) **não** passam pelo bot: funcionam direto no servidor, 24h por dia,
-> mesmo com o computador desligado.
+> Os canais com API oficial — **WhatsApp oficial** (Meta), **chat da OLX** e
+> **Mercado Livre** — **não** passam pelo bot: funcionam direto no servidor do Giro,
+> 24h por dia, mesmo com o computador desligado, e se ligam em **Minha loja**.
+> O bot existe para um número que continua no aplicativo do celular.
 
 ---
 
@@ -27,8 +28,11 @@ já logado, com a sua sessão. Por isso não guarda senha de portal nenhum.
 3. No Giro (site), vá em **Bot → Gerar token** e copie o token.
 4. Na janela do Giro Bot: cole o **token**, marque os **canais** e clique em
    **Testar conexão**. Aparecendo o nome da sua loja, clique em **Iniciar**.
-5. Na primeira vez com WhatsApp/OLX, abre uma janela do navegador para você
-   **fazer login** (QR do WhatsApp / conta OLX). Depois disso ele lembra.
+5. Na primeira vez com o WhatsApp, abre uma janela do navegador para você
+   **ler o QR Code**. Depois disso ele lembra.
+
+**Use um número só da loja.** O bot leva ao Giro as conversas individuais não
+lidas; grupos, listas de transmissão, status e canais ficam de fora.
 
 Deixe a janela aberta enquanto quiser receber e responder mensagens.
 
@@ -43,8 +47,9 @@ Google Chrome. Não precisa instalar Python nem nada além do instalador.
 
 ### Onde ficam os dados
 `%APPDATA%\GiroBot` — configuração (`config.json`), sessão do navegador
-(`perfil/`) e os arquivos do canal de teste. Desinstalar **não** apaga essa
-pasta; apague à mão se quiser zerar tudo.
+(`perfil/`), o **registro** (`bot.log`, também no botão **Abrir registro**) e os
+arquivos do canal de teste. Desinstalar **não** apaga essa pasta; apague à mão
+se quiser zerar tudo.
 
 ---
 
@@ -57,8 +62,9 @@ Marque o canal **Simulado**. Escreva linhas em
 5511999998888|Joao Silva|Esse carro ainda esta disponivel?
 ```
 
-Elas viram mensagens no Giro. As respostas do painel são gravadas em
-`simulado_saida.log`. Serve para validar a conexão antes de usar WhatsApp/OLX.
+Elas viram conversas no Giro, no filtro **Teste do bot**. As respostas do painel
+são gravadas em `simulado_saida.log`. Serve para validar a conexão antes de usar
+o WhatsApp.
 
 ---
 
@@ -102,7 +108,8 @@ canais/
   navegador.py     Playwright com perfil persistente (login salvo)
   simulado.py      canal de teste, sem navegador
   whatsapp.py      WhatsApp Web
-  olx.py           chat da OLX   (seletores a calibrar)
+checar_whatsapp.py confere o canal do WhatsApp contra uma página que imita o
+                   WhatsApp Web (sem rede): python checar_whatsapp.py
 ```
 
 Adicionar canal = criar uma classe que implementa `Canal` e registrá-la em
@@ -152,8 +159,10 @@ Autenticação: `Authorization: Bearer <token da loja>`.
 ## Limitações (importante)
 
 - **Só funciona com o computador ligado** e o programa aberto.
-- **Automação de portal é frágil**: se o site muda o layout, os seletores
-  precisam de ajuste (ficam no topo de `canais/whatsapp.py` e `canais/olx.py`).
-- Os seletores da **OLX ainda não foram calibrados** contra o site real; até lá
-  o canal avisa e não lê nada — nunca envia algo errado.
-- Automatizar contas pode contrariar os Termos de Uso das plataformas.
+- **Automação de site é frágil**: se o WhatsApp Web muda o layout, os seletores
+  precisam de ajuste (ficam no topo de `canais/whatsapp.py`). Quando o bot não
+  consegue identificar de quem é uma conversa, ele a ignora e avisa no registro.
+- **Ler marca como lida**: para ler, o bot abre a conversa, e o WhatsApp mostra
+  os tracinhos azuis ao cliente mesmo antes de alguém responder.
+- Automatizar o WhatsApp contraria os Termos de Uso dele e pode levar ao bloqueio
+  do número. Para uso profissional, prefira o **WhatsApp oficial** do Giro.
