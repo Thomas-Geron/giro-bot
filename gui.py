@@ -96,12 +96,12 @@ class Lateral(tk.Frame):
 
         topo = tk.Frame(self, bg=C["lateral"])
         topo.pack(fill="x", padx=px(16), pady=(px(22), px(26)))
-        logo = tk.Canvas(topo, width=px(38), height=px(38), bg=C["lateral"], highlightthickness=0)
-        logo.pack(side="left")
-        self._logo = ui_tema.guardar(self, ui_imagens.retangulo(
-            self, px(38), px(38), px(10), C["primaria"], gradiente=("#c0475f", "#8e2b3d")))
-        logo.create_image(0, 0, anchor="nw", image=self._logo)
-        logo.create_text(px(19), px(19), text="G", fill="#ffffff", font=(ui_tema.FONTE_FORTE, 15))
+        # a marca do site (pneu girando + barras de estoque), pronta em alguns tamanhos:
+        # o PhotoImage não reduz imagem com qualidade
+        lado = min((38, 48, 57, 67, 76), key=lambda t: abs(t - px(38)))
+        self._logo = ui_tema.guardar(self, tk.PhotoImage(
+            file=str(ui_tema.get_resource_dir() / "assets" / f"logo_{lado}.png")))
+        tk.Label(topo, image=self._logo, bg=C["lateral"], borderwidth=0).pack(side="left")
         nomes = tk.Frame(topo, bg=C["lateral"])
         nomes.pack(side="left", padx=(px(10), 0))
         tk.Label(nomes, text="Giro Bot", bg=C["lateral"], fg="#ffffff",
