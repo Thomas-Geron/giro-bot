@@ -1,9 +1,9 @@
 ﻿Termo de ciência de riscos, assunção de responsabilidade e isenção — bots de mensagens
-Versão de 24/09/2026
+Versão de 25/09/2026
 
 1. O que são os bots
 
-O Giro Bot e o MarketplaceBot ("os bots") são programas que rodam no seu computador e controlam o WhatsApp Web e sites de anúncio pelo navegador, como se fosse uma pessoa clicando. Eles não usam API oficial, não são produtos do WhatsApp, da Meta ou de qualquer portal, e não têm autorização, parceria ou suporte dessas empresas.
+O Giro Bot e o MarketplaceBot ("os bots") são programas que rodam no seu computador e controlam o WhatsApp Web, o Facebook e sites de anúncio pelo navegador, como se fosse uma pessoa clicando. Eles não usam API oficial, não são produtos do WhatsApp, da Meta ou de qualquer portal, e não têm autorização, parceria ou suporte dessas empresas.
 
 O uso é opcional. O Giro oferece caminhos oficiais — WhatsApp oficial (API da Meta), chat da OLX e Mercado Livre — que não dependem dos bots e não têm os riscos abaixo.
 
@@ -11,9 +11,11 @@ O uso é opcional. O Giro oferece caminhos oficiais — WhatsApp oficial (API da
 
 - Seu número pode ser bloqueado pelo WhatsApp. Automatizar o WhatsApp contraria os Termos de Serviço dele. O bloqueio pode ser definitivo, sem aviso e sem recurso: você perde o número, as conversas e os contatos.
 
+- Suas contas no Facebook e nos sites de anúncio podem ser bloqueadas. O MarketplaceBot automatiza o Facebook (Marketplace e Páginas), a OLX, a Webmotors e outros sites, o que contraria as regras deles. A conta pode ser restringida ou excluída, e junto vão os anúncios, as conversas e o histórico.
+
 - Você pode perder clientes e vendas. Se o número for bloqueado ou o bot falhar, mensagens deixam de chegar ou de ser respondidas, sem que ninguém perceba na hora.
 
-- O bot pode falhar ou errar. O WhatsApp Web e os sites de anúncio mudam sem aviso. O bot pode parar de ler, ler errado, atrasar, repetir ou deixar de enviar mensagens.
+- O bot pode falhar ou errar. O WhatsApp Web e os sites de anúncio mudam sem aviso. O bot pode parar de ler, ler errado, atrasar, repetir ou deixar de enviar mensagens, ou preencher anúncios com dados errados.
 
 - O cliente vê a mensagem como lida. Para ler, o bot abre a conversa: o cliente vê os tracinhos azuis antes de alguém responder.
 
@@ -31,7 +33,7 @@ Você declara que leu este termo, entendeu os riscos acima e decidiu, por conta 
 
 Você assume integral e exclusivamente os riscos e as consequências do uso, entre eles: bloqueio temporário ou definitivo de números e contas; perda de conversas, contatos, histórico, clientes, vendas, oportunidades e lucros; mensagens enviadas, lidas, perdidas, atrasadas, trocadas ou duplicadas; e reclamações de clientes, contatos ou terceiros.
 
-Você é o único responsável pelo número de telefone e pelas contas conectadas, pelo conteúdo das mensagens enviadas pelos bots ou pelo painel, pela segurança do computador onde eles rodam e por cumprir os Termos de Serviço do WhatsApp e dos portais.
+Você é o único responsável pelo número de telefone e pelas contas conectadas, pelo conteúdo das mensagens enviadas pelos bots ou pelo painel, pelos anúncios que eles publicarem, pela segurança do computador onde eles rodam e por cumprir os Termos de Serviço do WhatsApp e dos portais.
 
 4. Dados pessoais (LGPD)
 
@@ -64,6 +66,6 @@ O aceite fica registrado com o nome que você digitar, a conta da loja, a data e
 Declarações que você precisa marcar para usar os bots:
 
 [ ] Li este termo inteiro e entendi cada um dos riscos descritos.
-[ ] Sei que os bots não são oficiais e que usar automação no WhatsApp contraria os Termos de Serviço dele, podendo levar ao bloqueio definitivo do número.
+[ ] Sei que os bots não são oficiais e que automatizar o WhatsApp, o Facebook e os sites de anúncio contraria as regras deles, podendo levar ao bloqueio definitivo do número e das contas.
 [ ] Decido usar os bots por minha conta e assumo sozinho(a) todos os riscos e prejuízos descritos, isentando o Giro e seus responsáveis, nos termos deste documento.
 [ ] Sou responsável pelo número conectado e pelos dados das pessoas com quem converso (LGPD), e não vou enviar mensagens a quem não pediu.

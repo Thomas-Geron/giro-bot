@@ -6,6 +6,7 @@ sem internet, e a regra do nome completo (a mesma do site).
 
 RISCOS_PADRAO = [
     "Seu número pode ser bloqueado pelo WhatsApp",
+    "Suas contas no Facebook e nos sites de anúncio podem ser bloqueadas",
     "Você pode perder clientes e vendas",
     "O bot pode falhar ou errar",
     "O cliente vê a mensagem como lida",
