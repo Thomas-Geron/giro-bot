@@ -24,6 +24,7 @@ SolidCompression=yes
 WizardStyle=modern
 ; Termo de riscos: o instalador só continua com "Eu aceito" (texto vem de /api/bot/termo.txt do Giro)
 LicenseFile=TERMO.txt
+SetupIconFile=assets\icon.ico
 ; "lowest" = instala só para o usuário atual, sem pedir admin
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog

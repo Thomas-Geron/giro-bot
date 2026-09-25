@@ -111,6 +111,9 @@ baixar ~150 MB e simplifica o instalador.
 
 ```
 gui.py             janela do usuário (tkinter)
+ui_*.py           visual (tema, cartões, interruptor, registro, animação):
+                   cópia do MarketplaceBot, com as cores do Giro — mudar lá e cá
+assets/icon.ico    ícone do app
 main.py            modo terminal
 runner.py          motor: o ciclo entrada/saída, em thread própria
 config.py          configuração em %APPDATA%\GiroBot\config.json

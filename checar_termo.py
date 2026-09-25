@@ -71,16 +71,17 @@ def main() -> int:
 
     def interagir():
         j = dialogo(app)
-        caixas = widgets(j, "Checkbutton")
+        caixas = [w for w in widgets(j, "Canvas") if isinstance(w, gui.Marcador)]
         entrada = widgets(j, "TEntry")[0]
         aceito = next(b for b in widgets(j, "TButton") if "aceito" in str(b.cget("text")) and "Não" not in str(b.cget("text")))
         passos["inicio"] = str(aceito.cget("state"))
+        passos["caixas"] = len(caixas)
         for c in caixas[:-1]:
-            c.invoke()
+            c.alternar()
         entrada.insert(0, "Maria Silva")
         app.update()
         passos["faltando_caixa"] = str(aceito.cget("state"))
-        caixas[-1].invoke()
+        caixas[-1].alternar()
         entrada.delete(0, "end"); entrada.insert(0, "Maria")
         app.update()
         passos["sem_sobrenome"] = str(aceito.cget("state"))
@@ -91,6 +92,7 @@ def main() -> int:
 
     app.after(300, interagir)
     ok = app._termo_aceito(cfg)
+    checar(passos.get("caixas") == 3, "uma caixa por declaração")
     checar(passos.get("inicio") == "disabled", "o botão de aceitar começa desligado")
     checar(passos.get("faltando_caixa") == "disabled", "com uma declaração sem marcar, continua desligado")
     checar(passos.get("sem_sobrenome") == "disabled", "sem sobrenome, continua desligado")
