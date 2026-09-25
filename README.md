@@ -52,10 +52,13 @@ Giro e em cada conversa trazida pelo bot.
 Deixe a janela aberta enquanto quiser receber e responder mensagens.
 
 ### Atualizações
-O Giro Bot verifica sozinho, ao abrir, se existe versão nova. Havendo, ele
-**pergunta** se você quer atualizar — se aceitar, baixa o instalador com barra
-de progresso, fecha e instala. Nada é baixado sem você aceitar. Também dá para
-checar na hora pelo botão **Buscar atualizações**.
+O Giro Bot verifica sozinho se existe versão nova: ao abrir e, com a janela
+aberta, de 6 em 6 horas. Havendo, aparece um aviso azul no topo com
+**Atualizar agora** (ao abrir, ele também já pergunta). Se aceitar, baixa o
+instalador com barra de progresso, fecha e instala. Nada é baixado sem você
+aceitar. Também dá para checar na hora pelo botão **Buscar atualizações**.
+A consulta usa a página de releases do GitHub, não a API (que sem login só
+aceita 60 consultas por hora por conexão).
 
 **Requisitos:** Windows 10/11 com **Microsoft Edge** (já vem no Windows) ou
 Google Chrome. Não precisa instalar Python nem nada além do instalador.
@@ -131,6 +134,7 @@ TERMO.txt          termo para a página de licença do instalador
 checar_whatsapp.py confere o canal do WhatsApp contra uma página que imita o
                    WhatsApp Web (sem rede): python checar_whatsapp.py
 checar_termo.py    confere a janela do termo (sem rede): python checar_termo.py
+checar_atualizacao.py  confere o aviso de versão nova (sem rede)
 ```
 
 Adicionar canal = criar uma classe que implementa `Canal` e registrá-la em

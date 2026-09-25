@@ -42,6 +42,7 @@ CANAIS_UI = [
      "Confere a conexão sem abrir o WhatsApp: as mensagens saem do arquivo simulado_entrada.txt."),
 ]
 TITULO_RISCOS = "Riscos de usar o bot (não é oficial):"
+INTERVALO_ATUALIZACAO = 6 * 3600 * 1000  # ms: o bot fica aberto dias, então confere de 6 em 6 horas
 
 
 # ------------------------------------------------------------- lateral
@@ -227,6 +228,8 @@ class App(tk.Tk):
         self.fila = queue.Queue()      # mensagens do motor
         self.tarefas = queue.Queue()   # resultados das threads, rodados aqui
         self.runner = None
+        self._atualizacao = None       # última release nova encontrada
+        self._versao_avisada = None
 
         self.columnconfigure(1, weight=1)
         self.rowconfigure(0, weight=1)
@@ -239,6 +242,7 @@ class App(tk.Tk):
         self._log("Pronto. Cole o token, escolha os canais e clique em Iniciar.")
         self.after(200, self._drenar_filas)
         self.after(1500, lambda: self.checar_atualizacao(silencioso=True))
+        self.after(INTERVALO_ATUALIZACAO, self._checar_periodicamente)
         self.protocol("WM_DELETE_WINDOW", self._fechar)
 
     # ── layout ────────────────────────────────────────────────────────────
@@ -247,7 +251,7 @@ class App(tk.Tk):
         area = tk.Frame(self, bg=C["fundo"])
         area.grid(row=0, column=1, sticky="nsew")
         area.columnconfigure(0, weight=1)
-        area.rowconfigure(3, weight=1)
+        area.rowconfigure(4, weight=1)
         m = px(24)
 
         # Riscos: fixos no topo, sem fechar (só o link para ler o termo)
@@ -262,22 +266,31 @@ class App(tk.Tk):
         self.aviso.bind("<Configure>", lambda e: self.aviso.rotulo.configure(
             wraplength=max(200, e.width - px(170))), add="+")
 
+        # Versão nova: aparece sozinha (conferida ao abrir e de 6 em 6 horas)
+        self.aviso_versao = Banner(area, tipo="info", fechavel=False, titulo="Atualização disponível:", texto="")
+        self.aviso_versao.grid(row=1, column=0, sticky="we", padx=m, pady=(px(10), 0))
+        self.aviso_versao.grid_remove()
+        link = tk.Label(self.aviso_versao, text="Atualizar agora", bg=Banner.TIPOS["info"][0], fg="#1e3a8a",
+                        cursor="hand2", font=(ui_tema.FONTE_FORTE, 9, "underline"))
+        link.grid(row=0, column=2, sticky="n", padx=(px(10), 0))
+        link.bind("<Button-1>", lambda _e: self.atualizar_agora())
+
         cabecalho = ttk.Frame(area, style="Pagina.TFrame")
-        cabecalho.grid(row=1, column=0, sticky="we", padx=m, pady=(px(18), px(14)))
+        cabecalho.grid(row=2, column=0, sticky="we", padx=m, pady=(px(18), px(14)))
         ttk.Label(cabecalho, text="Painel do bot", style="Titulo.TLabel").pack(anchor="w")
         ttk.Label(cabecalho, style="Subtitulo.TLabel",
                   text="Traz as conversas do WhatsApp do celular para a Central de Mensagens do Giro "
                        "e envia daqui as suas respostas.").pack(anchor="w")
 
         cartoes = ttk.Frame(area, style="Pagina.TFrame")
-        cartoes.grid(row=2, column=0, sticky="we", padx=m - px(4))
+        cartoes.grid(row=3, column=0, sticky="we", padx=m - px(4))
         cartoes.columnconfigure(0, weight=3, uniform="c")
         cartoes.columnconfigure(1, weight=2, uniform="c")
         self._cartao_conexao(cartoes).grid(row=0, column=0, sticky="nsew", padx=px(4))
         self._cartao_canais(cartoes).grid(row=0, column=1, sticky="nsew", padx=px(4))
 
         self.log = LogExecucao(area, titulo="Registro", altura=8)
-        self.log.grid(row=3, column=0, sticky="nsew", padx=m - px(4), pady=(px(10), px(16)))
+        self.log.grid(row=4, column=0, sticky="nsew", padx=m - px(4), pady=(px(10), px(16)))
 
     def _cartao_conexao(self, pai):
         px = lambda v: ui_tema.px(self, v)  # noqa: E731
@@ -525,28 +538,51 @@ class App(tk.Tk):
         return resultado["nome"]
 
     # ── atualização ───────────────────────────────────────────────────────
-    def checar_atualizacao(self, silencioso: bool = True):
-        self._em_segundo_plano(updater.checar, lambda res: self._resultado_atualizacao(res, silencioso))
+    def checar_atualizacao(self, silencioso: bool = True, perguntar: bool = True):
+        """silencioso: sem janela quando não há novidade ou falha.
+        perguntar: havendo versão nova, já oferece a instalação (ao abrir e no botão);
+        na conferência periódica só aparece o aviso, para não parar o bot com uma janela."""
+        self._em_segundo_plano(updater.checar,
+                               lambda res: self._resultado_atualizacao(res, silencioso, perguntar))
 
-    def _resultado_atualizacao(self, res: dict, silencioso: bool):
+    def _checar_periodicamente(self):
+        self.checar_atualizacao(silencioso=True, perguntar=False)
+        self.after(INTERVALO_ATUALIZACAO, self._checar_periodicamente)
+
+    def _resultado_atualizacao(self, res: dict, silencioso: bool, perguntar: bool = True):
         if "erro" in res:
             if not silencioso:
                 messagebox.showinfo("Atualizações", f"Não foi possível verificar agora:\n{res['erro']}")
             return
         if not res.get("ha_atualizacao"):
-            self._log(f"Você está na versão mais recente (v{__version__}).")
+            if perguntar:
+                self._log(f"Você está na versão mais recente (v{__version__}).")
             if not silencioso:
                 messagebox.showinfo("Atualizações", f"Tudo em dia! Você já usa a versão {__version__}.")
             return
 
+        self._atualizacao = res
         nova = res.get("versao")
-        self._log(f"Nova versão disponível: v{nova}")
-        msg = f"Nova versão {nova} disponível (você tem {__version__}).\n\nDeseja atualizar agora?"
+        if self._versao_avisada != nova:
+            self._versao_avisada = nova
+            self._log(f"Nova versão disponível: v{nova}")
+            self.aviso_versao.texto(f"Atualização disponível:  o Giro Bot {nova} já saiu (você usa o "
+                                    f"{__version__}). Leva cerca de um minuto; se o bot estiver rodando, "
+                                    "ele para e você abre de novo no final.")
+            self.aviso_versao.grid()
+        if perguntar:
+            self.atualizar_agora()
+
+    def atualizar_agora(self):
+        res = self._atualizacao
+        if not res:
+            return
+        msg = f"Nova versão {res.get('versao')} disponível (você tem {__version__}).\n\nDeseja atualizar agora?"
         notas = (res.get("notas") or "").strip()
         if notas:
             msg += f"\n\nNovidades:\n{notas[:400]}"
         if not messagebox.askyesno("Atualização disponível", msg):
-            self._log("Atualização adiada pelo usuário.")
+            self._log("Atualização adiada. O aviso fica no topo até você atualizar.")
             return
 
         url = res.get("url_instalador")
