@@ -27,7 +27,7 @@ def nivel_da_linha(texto):
         return None
     baixo = t.lower()
     if (_ERRO.search(t) or "falha" in baixo or "erro" in baixo or "não consegui" in baixo
-            or "recusou" in baixo):
+            or "recusou" in baixo or "bloqueado" in baixo):
         return "erro"
     if ("não aceito" in baixo or baixo.startswith(("confira", "aviso", "nova versão"))
             or "ignorad" in baixo):
@@ -137,5 +137,6 @@ if __name__ == "__main__":
     assert nivel_da_linha("[whatsapp] falha ao enviar resposta: x") == "erro"
     assert nivel_da_linha("Termo não aceito: o bot não foi iniciado.") == "aviso"
     assert nivel_da_linha("Bot parado.") == "info"
+    assert nivel_da_linha("Bot bloqueado: O Giro Bot faz parte do plano Loja") == "erro"
     assert nivel_da_linha("   ") is None
     print("níveis ok")

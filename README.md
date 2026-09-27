@@ -51,6 +51,13 @@ Giro e em cada conversa trazida pelo bot.
 
 Deixe a janela aberta enquanto quiser receber e responder mensagens.
 
+### Plano e pagamento
+O Giro Bot faz parte dos planos **Loja** e **Revenda** do Giro. Ao iniciar, ele
+confere no Giro se a sua loja tem um desses planos e está com o pagamento em
+dia. Sem essa conferência — por exemplo, sem internet — ele não inicia. Se o
+pagamento vencer (depois da carência) ou o plano mudar com o bot aberto, ele
+para e mostra o motivo, com o botão para abrir **Meu plano** no Giro.
+
 ### Atualizações
 O Giro Bot verifica sozinho se existe versão nova: ao abrir e, com a janela
 aberta, de 6 em 6 horas. Havendo, aparece um aviso azul no topo com
@@ -135,6 +142,7 @@ checar_whatsapp.py confere o canal do WhatsApp contra uma página que imita o
                    WhatsApp Web (sem rede): python checar_whatsapp.py
 checar_termo.py    confere a janela do termo (sem rede): python checar_termo.py
 checar_atualizacao.py  confere o aviso de versão nova (sem rede)
+checar_licenca.py  confere plano, pagamento e falta de internet (sem rede)
 ```
 
 Adicionar canal = criar uma classe que implementa `Canal` e registrá-la em

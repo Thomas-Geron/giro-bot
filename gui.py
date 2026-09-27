@@ -133,8 +133,12 @@ class Lateral(tk.Frame):
         self.lbl_loja.pack(fill="x", pady=(px(2), 0))
         self.conexao(None)
 
-    def conexao(self, loja=None, erro=None):
-        if loja:
+    def conexao(self, loja=None, erro=None, bloqueio=None):
+        if bloqueio:
+            self.ponto.configure(fg=C["erro"])
+            self.lbl_estado.configure(text="Bot bloqueado")
+            self.lbl_loja.configure(text=bloqueio[:160])
+        elif loja:
             self.ponto.configure(fg=C["sucesso"])
             self.lbl_estado.configure(text="Conectado ao Giro")
             self.lbl_loja.configure(text=loja)
@@ -402,7 +406,12 @@ class App(tk.Tk):
 
         def pronto(res):
             self.bt_testar.state(["!disabled"])
-            if "erro" in res:
+            if res.get("bloqueio"):
+                self._log(f"Bot bloqueado: {res['erro']}")
+                self._resultado_selo("Bloqueado", "erro")
+                self.lateral.conexao(bloqueio=res["erro"])
+                self._avisar_bloqueio(res["erro"])
+            elif "erro" in res:
                 self._log(f"Falha na conexão: {res['erro']}")
                 self._resultado_selo("Não conectou", "erro")
                 self.lateral.conexao(erro=res["erro"])
@@ -639,6 +648,12 @@ class App(tk.Tk):
             return
         self.destroy()
 
+    def _avisar_bloqueio(self, motivo: str):
+        """O Giro recusou (plano, pagamento ou termo): explica e oferece abrir Meu plano."""
+        if messagebox.askyesno("Bot bloqueado",
+                               f"{motivo}\n\nAbrir o Giro agora, em Meu plano?"):
+            self.abrir_giro("/admin/plano")
+
     # ── registro ──────────────────────────────────────────────────────────
     def _log(self, msg: str):
         """Mensagem da própria janela: vai para a tela e para o arquivo."""
@@ -660,6 +675,10 @@ class App(tk.Tk):
                     self.lateral.conexao(loja=msg.split(":", 1)[1].strip())
                 elif msg.startswith("Não consegui falar com o Giro:"):
                     self.lateral.conexao(erro=msg.split(":", 1)[1].strip())
+                elif msg.startswith("Bot bloqueado:"):
+                    motivo = msg.split(":", 1)[1].strip()
+                    self.lateral.conexao(bloqueio=motivo)
+                    self._avisar_bloqueio(motivo)
         except queue.Empty:
             pass
         if self.runner and not self.runner.rodando and self.barra.estado != "parado":

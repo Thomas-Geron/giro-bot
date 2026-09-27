@@ -20,6 +20,27 @@ from version import __version__
 logger = logging.getLogger(__name__)
 
 
+class BotBloqueado(Exception):
+    """O Giro recusou o bot: plano sem o Giro Bot, pagamento em atraso ou termo não aceito.
+    Não adianta tentar de novo — o bot para e mostra a mensagem do Giro."""
+
+    def __init__(self, mensagem: str, motivo: str):
+        super().__init__(mensagem)
+        self.motivo = motivo  # 'plano' | 'pagamento' | 'termo'
+
+
+def _checar_bloqueio(r: httpx.Response) -> None:
+    if r.status_code != 403:
+        return
+    try:
+        dados = r.json() or {}
+    except ValueError:
+        return
+    motivo = dados.get("motivo") or ("termo" if "termo" in dados else None)
+    if motivo:
+        raise BotBloqueado(dados.get("erro") or "O Giro não liberou o bot.", motivo)
+
+
 def _erro(exc: httpx.HTTPStatusError) -> str:
     """Mensagem do próprio Giro quando houver (ex.: termo não aceito); senão o código HTTP."""
     try:
@@ -53,11 +74,16 @@ class GiroClient:
     def fechar(self) -> None:
         self._http.close()
 
-    def ping(self) -> dict:
+    def licenca(self) -> dict:
+        """Confere no Giro se esta loja pode usar o Giro Bot (plano, pagamento e termo).
+        Levanta BotBloqueado quando o Giro recusa; {'erro'} quando não dá para conferir."""
         try:
-            r = self._http.get(f"{self.url}/api/bot/ping")
+            r = self._http.get(f"{self.url}/api/bot/licenca", params={"bot": "giro_bot"})
+            _checar_bloqueio(r)
             r.raise_for_status()
             return r.json()
+        except BotBloqueado:
+            raise
         except httpx.HTTPStatusError as exc:
             return {"erro": _erro(exc)}
         except Exception as exc:
@@ -91,8 +117,11 @@ class GiroClient:
         payload = {"mensagens": [asdict(m) for m in mensagens]}
         try:
             r = self._http.post(f"{self.url}/api/bot/inbound", json=payload)
+            _checar_bloqueio(r)
             r.raise_for_status()
             return r.json()
+        except BotBloqueado:
+            raise
         except httpx.HTTPStatusError as exc:
             return {"erro": _erro(exc)}
         except Exception as exc:
@@ -101,8 +130,11 @@ class GiroClient:
     def buscar_outbound(self) -> list[dict]:
         try:
             r = self._http.get(f"{self.url}/api/bot/outbound")
+            _checar_bloqueio(r)
             r.raise_for_status()
             return (r.json() or {}).get("pendentes", [])
+        except BotBloqueado:
+            raise
         except Exception as exc:
             logger.warning("Falha ao buscar respostas pendentes: %s", exc)
             return []

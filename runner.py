@@ -10,7 +10,7 @@ from typing import Callable, Optional
 
 import config
 from canais import criar_canais
-from giro_client import GiroClient
+from giro_client import BotBloqueado, GiroClient
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +22,7 @@ class Runner:
         self._parar = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self.loja: str = ""
+        self.bloqueio: str = ""  # 'plano' | 'pagamento' | 'termo' quando o Giro recusou
 
     def _log(self, msg: str) -> None:
         logger.info(msg)
@@ -48,11 +49,18 @@ class Runner:
 
     # ── testes rápidos ────────────────────────────────────────────────────
     def testar_conexao(self) -> dict:
+        """{'loja', ...} se liberado; {'erro', 'bloqueio'?} se não."""
         cli = GiroClient(self.cfg.get("giro_url", ""), self.cfg.get("token", ""))
         try:
-            return cli.ping()
+            return cli.licenca()
+        except BotBloqueado as exc:
+            return {"erro": str(exc), "bloqueio": exc.motivo}
         finally:
             cli.fechar()
+
+    def _bloqueado(self, exc: "BotBloqueado") -> None:
+        self.bloqueio = exc.motivo
+        self._log(f"Bot bloqueado: {exc}")
 
     # ── ciclo ─────────────────────────────────────────────────────────────
     def _ciclo(self, cli: GiroClient, canais: dict) -> None:
@@ -90,12 +98,17 @@ class Runner:
         cli = GiroClient(self.cfg.get("giro_url", ""), self.cfg.get("token", ""))
         canais, navegador = {}, None
         try:
-            pong = cli.ping()
-            if "erro" in pong:
-                self._log(f"Não consegui falar com o Giro: {pong['erro']}")
-                self._log("Confira o endereço e o token, depois tente de novo.")
+            try:
+                lic = cli.licenca()  # plano, pagamento e termo; sem essa conferência não inicia
+            except BotBloqueado as exc:
+                self._bloqueado(exc)
                 return
-            self.loja = pong.get("loja") or "loja"
+            if "erro" in lic:
+                self._log(f"Não consegui falar com o Giro: {lic['erro']}")
+                self._log("Sem conferir o plano no Giro o bot não inicia. Confira a internet, "
+                          "o endereço e o token, depois tente de novo.")
+                return
+            self.loja = lic.get("loja") or "loja"
             self._log(f"Conectado ao Giro como: {self.loja}")
 
             canais, navegador = criar_canais(
@@ -117,6 +130,9 @@ class Runner:
             while not self._parar.is_set():
                 try:
                     self._ciclo(cli, canais)
+                except BotBloqueado as exc:  # o Giro recusou no meio do caminho: para já
+                    self._bloqueado(exc)
+                    break
                 except Exception as exc:
                     self._log(f"Erro no ciclo: {exc}")
                 for _ in range(intervalo):
