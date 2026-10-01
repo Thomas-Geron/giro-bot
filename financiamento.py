@@ -89,6 +89,27 @@ def simular_todas(financeiras: list, valor_veiculo: float, entrada: float,
     return [simular(f, valor_veiculo, entrada, renda, idade_veiculo) for f in financeiras]
 
 
+def melhor_opcao(financeiras: list, valor_veiculo: float, entrada: float,
+                 renda: float = 0.0, idade_veiculo: int | None = None) -> dict:
+    """A opção mais barata entre todas as financeiras/prazos que cabem para este carro.
+    Se nada cabe, diz a entrada mínima que faria caber (ou None, se nenhuma financeira
+    aceita o veículo). Serve para a tela 'carros que cabem'."""
+    melhor = None
+    limite_max = 0.0
+    for r in simular_todas(financeiras, valor_veiculo, entrada, renda, idade_veiculo):
+        if r["recusa"] is None:
+            limite_max = max(limite_max, r["limite_financiado"])
+        for o in r["opcoes"]:
+            if o["cabe"] and (melhor is None or o["parcela"] < melhor["parcela"]):
+                melhor = {"cabe": True, "financeira": r["financeira"], "prazo": o["prazo"],
+                          "parcela": o["parcela"], "total": o["total"]}
+    if melhor:
+        return melhor
+    # entrada mínima para caber: o preço menos o máximo que alguma financeira daria
+    entrada_min = round(valor_veiculo - limite_max, 2) if limite_max > 0 else None
+    return {"cabe": False, "entrada_min": entrada_min}
+
+
 # ── leitura e exibição de valores em reais ────────────────────────────────────
 def ler_dinheiro(texto) -> float:
     """Aceita '45000', '45.000', '45000,50', '45.000,50', 'R$ 1.234.567,89'."""
@@ -158,4 +179,16 @@ if __name__ == "__main__":
     assert ler_dinheiro("R$ 1.234.567,89") == 1234567.89 and ler_dinheiro("45000.50") == 45000.50
     assert ler_dinheiro("") == 0 and ler_dinheiro(50000) == 50000
     assert fmt_dinheiro(1234567.8) == "R$ 1.234.567,80" and fmt_pct(0.019) == "1,9%"
+
+    financeiras = [Financeira("A", 0.019, prazos=[48], ltv_max=0.90, comprometimento_max=0.30),
+                   Financeira("B", 0.025, prazos=[48], ltv_max=0.95, comprometimento_max=0.30)]
+    # carro barato, renda boa: cabe; a mais barata é a A (juros menor)
+    m = melhor_opcao(financeiras, 40000, 10000, renda=8000)
+    assert m["cabe"] and m["financeira"] == "A" and m["parcela"] > 0
+    # carro caro, renda baixa: não cabe; sugere a entrada mínima
+    m2 = melhor_opcao(financeiras, 200000, 10000, renda=2000)
+    assert not m2["cabe"] and m2["entrada_min"] and m2["entrada_min"] > 10000
+    # todas recusam (idade): entrada mínima não se aplica
+    so_velha = [Financeira("V", 0.019, idade_max_veiculo=5)]
+    assert melhor_opcao(so_velha, 40000, 10000, renda=8000, idade_veiculo=12) == {"cabe": False, "entrada_min": None}
     print("financiamento: contas e leitura ok")

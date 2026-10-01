@@ -90,6 +90,26 @@ def main() -> int:
            and abs(salvos[0].taxa_am - 0.021) < 1e-9 and salvos[0].prazos == [36, 60]
            and abs(salvos[0].ltv_max - 0.95) < 1e-9, "financeira criada a partir do formulário")
 
+    print("[carros que cabem]")
+    financeiras = [fin.Financeira("A", 0.019, prazos=[48], ltv_max=0.90, comprometimento_max=0.30)]
+    carros = [{"id": 1, "titulo": "Fiat Uno", "ano": 2020, "km": 50000, "valor": 35000},
+              {"id": 2, "titulo": "BMW X5", "ano": 2022, "km": 10000, "valor": 300000}]
+    jc = uif.JanelaCarros(jan, carros, financeiras, 10000, 8000, jan._usar_carro)
+    jc.withdraw()
+    iids = jc.tv.get_children()
+    checar(len(iids) == 2, "duas linhas (um carro por linha)")
+    tags = {jc._iid[i]["titulo"]: jc.tv.item(i, "tags")[0] for i in iids}
+    checar(tags.get("Fiat Uno") == "cabe" and tags.get("BMW X5") == "nao",
+           "o Uno cabe e a BMW (cara, renda baixa) não")
+    bmw = next(i for i in iids if jc._iid[i]["titulo"] == "BMW X5")
+    checar("Entrada ≥" in jc.tv.item(bmw, "values")[3], "a BMW mostra a entrada mínima")
+    uno = next(i for i in iids if jc._iid[i]["titulo"] == "Fiat Uno")
+    jc.tv.selection_set(uno)
+    jc._escolher()
+    checar(jan.ent_valor.get().startswith("35") and jan.ent_ano.get() == "2020"
+           and len(jan.tv.get_children()) == 1,
+           "duplo clique leva o carro para a simulação detalhada")
+
     root.destroy()
     print("\nRESULTADO:", "TUDO OK" if not falhas else f"{len(falhas)} FALHA(S)")
     return 1 if falhas else 0

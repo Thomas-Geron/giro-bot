@@ -58,6 +58,10 @@ que autorizou, quanto cada uma financiaria e as parcelas por prazo. São contas
 locais (Tabela Price), para comparar — **o Giro Bot não acessa as financeiras**;
 o valor que vale é o da simulação oficial de cada uma (o CET).
 
+Em **Carros que cabem** o bot puxa o estoque disponível do Giro e mostra, para a
+entrada e a renda informadas, quais carros cabem para o cliente e a melhor opção
+de cada um — sem digitar carro por carro.
+
 ### Plano e pagamento
 O Giro Bot faz parte dos planos **Loja** e **Revenda** do Giro. Ao iniciar, ele
 confere no Giro se a sua loja tem um desses planos e está com o pagamento em

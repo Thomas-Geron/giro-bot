@@ -111,6 +111,21 @@ class GiroClient:
         except Exception as exc:
             return {"erro": str(exc)}
 
+    def veiculos(self) -> dict:
+        """Estoque disponível da loja (para o simulador de financiamento).
+        {'veiculos': [...]} ou {'erro': ...}; BotBloqueado se o Giro recusar."""
+        try:
+            r = self._http.get(f"{self.url}/api/bot/veiculos")
+            _checar_bloqueio(r)
+            r.raise_for_status()
+            return r.json()
+        except BotBloqueado:
+            raise
+        except httpx.HTTPStatusError as exc:
+            return {"erro": _erro(exc)}
+        except Exception as exc:
+            return {"erro": str(exc)}
+
     def enviar_inbound(self, mensagens: list[MensagemEntrante]) -> dict:
         if not mensagens:
             return {"ok": True, "aceitas": 0}

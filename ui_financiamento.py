@@ -4,12 +4,15 @@ Abre a partir do atalho "Financiamento" na lateral. O lojista cadastra as financ
 com que trabalha (taxas e regras do contrato) e simula, para o cliente que está na loja
 e autorizou, quanto cada uma financiaria e as parcelas por prazo.
 """
+import threading
 import tkinter as tk
+from datetime import datetime
 from tkinter import messagebox, ttk
 
 import config
 import financiamento as fin
 import ui_tema
+from giro_client import BotBloqueado, GiroClient
 from ui_componentes import Cartao, placeholder
 
 C = ui_tema.CORES
@@ -77,7 +80,10 @@ class JanelaFinanciamento(tk.Toplevel):
 
         ttk.Button(d, text="Simular", style="Primario.TButton", cursor="hand2",
                    command=self._simular).pack(anchor="w", pady=(px(18), 0))
-        ttk.Button(d, text="Financeiras…", style="Secundario.TButton", cursor="hand2",
+        self.bt_carros = ttk.Button(d, text="Carros que cabem…", style="Secundario.TButton",
+                                    cursor="hand2", command=self._ver_carros)
+        self.bt_carros.pack(anchor="w", pady=(px(8), 0))
+        ttk.Button(d, text="Financeiras…", style="FantasmaCartao.TButton", cursor="hand2",
                    command=self._gerenciar).pack(anchor="w", pady=(px(8), 0))
         self.lbl_qtd = ui_tema.texto_suave(d, "")
         self.lbl_qtd.pack(anchor="w", pady=(px(10), 0))
@@ -123,6 +129,62 @@ class JanelaFinanciamento(tk.Toplevel):
 
     def _gerenciar(self):
         JanelaFinanceiras(self, self._atualizar_contagem)
+
+    def _ver_carros(self):
+        """Busca o estoque no Giro (em segundo plano) e mostra quais carros cabem."""
+        financeiras = config.carregar_financeiras()
+        if not financeiras:
+            messagebox.showinfo("Financiamento", "Cadastre ao menos uma financeira primeiro.", parent=self)
+            return self._gerenciar()
+        entrada = fin.ler_dinheiro(self.ent_entrada.get())
+        renda = fin.ler_dinheiro(self.ent_renda.get())
+        cfg = config.carregar()
+        if not cfg.get("token"):
+            return messagebox.showwarning("Financiamento",
+                "Para ler o estoque, configure e teste o token no painel do Giro Bot.", parent=self)
+
+        self.bt_carros.configure(text="Buscando…", state="disabled")
+        dados = {}
+
+        def trabalho():
+            cli = GiroClient(cfg.get("giro_url", ""), cfg.get("token", ""))
+            try:
+                dados["res"] = cli.veiculos()
+            except BotBloqueado as exc:
+                dados["bloqueio"] = str(exc)
+            except Exception as exc:
+                dados["res"] = {"erro": str(exc)}
+            finally:
+                cli.fechar()
+
+        threading.Thread(target=trabalho, daemon=True).start()
+
+        def pronto():
+            if not dados:
+                return self.after(120, pronto)
+            self.bt_carros.configure(text="Carros que cabem…", state="normal")
+            if dados.get("bloqueio"):
+                messagebox.showwarning("Bot bloqueado", dados["bloqueio"], parent=self)
+                return self.app.abrir_giro("/admin/plano")
+            res = dados.get("res") or {}
+            if "erro" in res:
+                return messagebox.showwarning("Financiamento",
+                    f"Não consegui ler o estoque: {res['erro']}", parent=self)
+            carros = res.get("veiculos") or []
+            if not carros:
+                return messagebox.showinfo("Financiamento",
+                    "Nenhum carro disponível com preço cadastrado no Giro.", parent=self)
+            JanelaCarros(self, carros, financeiras, entrada, renda, self._usar_carro)
+
+        self.after(120, pronto)
+
+    def _usar_carro(self, carro):
+        """Da lista de carros, joga um carro nos campos e simula as financeiras dele."""
+        self.ent_valor.delete(0, "end"); self.ent_valor.insert(0, fin.fmt_dinheiro(carro["valor"]).replace("R$ ", ""))
+        self.ent_ano.delete(0, "end")
+        if carro.get("ano"):
+            self.ent_ano.insert(0, str(carro["ano"]))
+        self._simular()
 
     def _simular(self):
         financeiras = config.carregar_financeiras()
@@ -334,3 +396,89 @@ class _FormFinanceira(tk.Toplevel):
         )
         self.ao_salvar(nova)
         self.destroy()
+
+
+class JanelaCarros(tk.Toplevel):
+    """Lista o estoque do Giro e, para a entrada/renda informadas, mostra quais carros
+    cabem e a melhor opção de cada um. Duplo clique leva o carro para a simulação detalhada."""
+
+    def __init__(self, pai, carros, financeiras, entrada, renda, ao_escolher):
+        super().__init__(pai, bg=C["fundo"])
+        self.carros = carros
+        self.ao_escolher = ao_escolher
+        self.title("Carros que cabem")
+        ui_tema.icone(self)
+        ui_tema.geometria(self, 820, 620, minimo=(680, 460), centralizar=True)
+        self.transient(pai)
+        px = lambda v: ui_tema.px(self, v)  # noqa: E731
+
+        tk.Label(self, text="Carros que cabem para este cliente", bg=C["fundo"], fg=C["texto"],
+                 font=(ui_tema.FONTE_FORTE, 14)).pack(anchor="w", padx=px(20), pady=(px(18), px(2)))
+        base = f"Entrada {fin.fmt_dinheiro(entrada)}"
+        base += f" · Renda {fin.fmt_dinheiro(renda)}" if renda else " · sem renda informada (só pelo valor do carro)"
+        tk.Label(self, text=base + ". Duplo clique para ver as parcelas de um carro.",
+                 bg=C["fundo"], fg=C["texto_suave"], font=(ui_tema.FONTE, 9),
+                 anchor="w").pack(anchor="w", padx=px(20), pady=(0, px(10)))
+
+        moldura = ttk.Frame(self, style="Superficie.TFrame")
+        moldura.pack(fill="both", expand=True, padx=px(20), pady=(0, px(16)))
+        moldura.rowconfigure(0, weight=1)
+        moldura.columnconfigure(0, weight=1)
+        cols = ("ano", "preco", "parcela", "situacao")
+        self.tv = ttk.Treeview(moldura, columns=cols, show="tree headings", height=16)
+        self.tv.heading("#0", text="Carro")
+        self.tv.heading("ano", text="Ano")
+        self.tv.heading("preco", text="Preço")
+        self.tv.heading("parcela", text="Melhor parcela")
+        self.tv.heading("situacao", text="Situação")
+        self.tv.column("#0", width=px(230), anchor="w")
+        self.tv.column("ano", width=px(60), anchor="center")
+        self.tv.column("preco", width=px(120), anchor="e")
+        self.tv.column("parcela", width=px(130), anchor="e")
+        self.tv.column("situacao", width=px(180), anchor="w")
+        self.tv.tag_configure("cabe", foreground=C["sucesso_texto"])
+        self.tv.tag_configure("nao", foreground=C["texto_suave"])
+        barra = ttk.Scrollbar(moldura, orient="vertical", command=self.tv.yview)
+        self.tv.configure(yscrollcommand=barra.set)
+        self.tv.grid(row=0, column=0, sticky="nsew")
+        barra.grid(row=0, column=1, sticky="ns")
+        self.tv.bind("<Double-1>", self._escolher)
+
+        ano_atual = datetime.now().year
+        linhas = []
+        for c in carros:
+            idade = (ano_atual - c["ano"]) if c.get("ano") else None
+            m = fin.melhor_opcao(financeiras, c["valor"], entrada, renda, idade)
+            linhas.append((c, m))
+        # cabem primeiro, por parcela; depois os que não cabem, por preço
+        linhas.sort(key=lambda x: (not x[1]["cabe"], x[1].get("parcela", x[0]["valor"])))
+
+        self._iid = {}
+        cabem = 0
+        for c, m in linhas:
+            if m["cabe"]:
+                cabem += 1
+                parcela = fin.fmt_dinheiro(m["parcela"])
+                sit = f"{m['financeira']} {m['prazo']}x"
+                tag = "cabe"
+            else:
+                parcela = "—"
+                if m.get("entrada_min"):
+                    sit = "Entrada ≥ " + fin.fmt_dinheiro(m["entrada_min"]).rsplit(",", 1)[0]
+                else:
+                    sit = "Nenhuma financeira aceita"
+                tag = "nao"
+            iid = self.tv.insert("", "end", text="  " + c["titulo"],
+                                 values=(c.get("ano") or "—", fin.fmt_dinheiro(c["valor"]), parcela, sit),
+                                 tags=(tag,))
+            self._iid[iid] = c
+
+        tk.Label(self, text=f"{cabem} de {len(carros)} carro(s) cabem com essa entrada.",
+                 bg=C["fundo"], fg=C["texto_suave"], font=(ui_tema.FONTE, 9),
+                 anchor="w").pack(anchor="w", padx=px(20), pady=(0, px(14)))
+
+    def _escolher(self, _evento=None):
+        sel = self.tv.selection()
+        if sel and sel[0] in self._iid:
+            self.ao_escolher(self._iid[sel[0]])
+            self.destroy()
