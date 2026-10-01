@@ -51,6 +51,13 @@ Giro e em cada conversa trazida pelo bot.
 
 Deixe a janela aberta enquanto quiser receber e responder mensagens.
 
+### Simulador de financiamento
+No atalho **Financiamento** (lateral) o lojista cadastra as financeiras com que
+trabalha (as taxas e regras de cada contrato) e simula, para um cliente presente
+que autorizou, quanto cada uma financiaria e as parcelas por prazo. São contas
+locais (Tabela Price), para comparar — **o Giro Bot não acessa as financeiras**;
+o valor que vale é o da simulação oficial de cada uma (o CET).
+
 ### Plano e pagamento
 O Giro Bot faz parte dos planos **Loja** e **Revenda** do Giro. Ao iniciar, ele
 confere no Giro se a sua loja tem um desses planos e está com o pagamento em
@@ -143,6 +150,7 @@ checar_whatsapp.py confere o canal do WhatsApp contra uma página que imita o
 checar_termo.py    confere a janela do termo (sem rede): python checar_termo.py
 checar_atualizacao.py  confere o aviso de versão nova (sem rede)
 checar_licenca.py  confere plano, pagamento e falta de internet (sem rede)
+checar_financiamento.py  confere o simulador de financiamento (sem rede)
 ```
 
 Adicionar canal = criar uma classe que implementa `Canal` e registrá-la em

@@ -33,6 +33,7 @@ PADRAO = {
     "termo_versao": "",      # versão do termo de riscos aceita nesta janela
     "termo_nome": "",
     "termo_aceito_em": "",
+    "financeiras": [],       # simulador de financiamento: taxas/regras cadastradas pelo lojista
 }
 
 
@@ -63,7 +64,27 @@ def carregar() -> dict:
 
     dados["giro_url"] = (dados.get("giro_url") or "").rstrip("/")
     dados["canais"] = [c for c in dados.get("canais") or [] if c in CANAIS]  # versões antigas tinham "olx"
+    if not isinstance(dados.get("financeiras"), list):
+        dados["financeiras"] = []
     return dados
+
+
+def carregar_financeiras() -> list:
+    """Lista de Financeira (objetos) cadastradas pelo lojista."""
+    from financiamento import Financeira
+    saida = []
+    for d in carregar().get("financeiras", []):
+        try:
+            saida.append(Financeira.de_dict(d))
+        except Exception:
+            pass
+    return saida
+
+
+def salvar_financeiras(financeiras: list) -> None:
+    """Grava a lista de Financeira (objetos)."""
+    from dataclasses import asdict
+    salvar({"financeiras": [asdict(f) for f in financeiras]})
 
 
 def configurar_log() -> Path:

@@ -111,6 +111,7 @@ class Lateral(tk.Frame):
                  font=(ui_tema.FONTE, 8)).pack(anchor="w")
 
         for nome_icone, texto, comando in (
+                ("banco", "Financiamento", app.abrir_financiamento),
                 ("globo", "Abrir o Giro", app.abrir_giro),
                 ("escudo", "Ler o termo", lambda: app.abrir_giro("/admin/bot/termo")),
                 ("pasta", "Abrir registro", app.abrir_registro),
@@ -372,6 +373,14 @@ class App(tk.Tk):
             os.startfile(config.LOG_FILE)  # abre no Bloco de Notas
         else:
             messagebox.showinfo("Registro", "Ainda não há registro. Ele é criado quando o bot roda.")
+
+    def abrir_financiamento(self):
+        if getattr(self, "_janela_fin", None) and self._janela_fin.winfo_exists():
+            self._janela_fin.lift()
+            self._janela_fin.focus_force()
+            return
+        import ui_financiamento
+        self._janela_fin = ui_financiamento.JanelaFinanciamento(self)
 
     def _coletar(self) -> dict:
         return {
